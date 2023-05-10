@@ -26,11 +26,13 @@
 
 #include <InitGuid.h>
 #include <dxgi.h>
+#include <dxgi1_3.h>
 #include <d3d11.h>
 #include <d3d10.h>
 
 static HRESULT (__stdcall *Real_CreateDXGIFactory)(REFIID riid,void **ppFactory) = 0;
 static HRESULT (__stdcall *Real_CreateDXGIFactory1)(REFIID riid,void **ppFactory) = 0;
+static HRESULT(__stdcall* Real_CreateDXGIFactory2)(REFIID riid, void** ppFactory) = 0;
 static HRESULT (__stdcall *Real_Factory_CreateSwapChain)(IUnknown *me,IUnknown *dev,DXGI_SWAP_CHAIN_DESC *desc,IDXGISwapChain **chain) = 0;
 static HRESULT (__stdcall *Real_D3D11CreateDeviceAndSwapChain)(IDXGIAdapter *pAdapter, D3D_DRIVER_TYPE DriverType, HMODULE Software, UINT Flags, const D3D_FEATURE_LEVEL *pFeatureLevels, UINT FeatureLevels, UINT SDKVersion, const DXGI_SWAP_CHAIN_DESC *pSwapChainDesc, IDXGISwapChain **ppSwapChain, ID3D11Device **ppDevice, D3D_FEATURE_LEVEL *pFeatureLevel, ID3D11DeviceContext **ppImmediateContext);
 static HRESULT (__stdcall *Real_SwapChain_Present)(IDXGISwapChain *me,UINT SyncInterval,UINT Flags) = 0;
@@ -178,34 +180,52 @@ static HRESULT __stdcall Mine_Factory_CreateSwapChain(IUnknown *me,IUnknown *dev
   HRESULT hr = Real_Factory_CreateSwapChain(me,dev,desc,chain);
   if(SUCCEEDED(hr))
   {
-    printLog("video/d3d10: swap chain created.\n");
+    printLog("video/dxgi: factory @ %p created swap chain @ %p\n", me, *chain);
     HookCOMOnce(&Real_SwapChain_Present,*chain,8,Mine_SwapChain_Present);
   }
 
   return hr;
 }
 
-void HookDXGIFactory(REFIID riid, void *pFactory)
+void HookDXGIFactory(REFIID riid, void* pFactory)
 {
-  if (riid == IID_IDXGIFactory)
-    HookCOMOnce(&Real_Factory_CreateSwapChain, (IUnknown *) pFactory, 10, Mine_Factory_CreateSwapChain);
-  // TODO: handle IID_IDXGIFactory2 (if that's used by a demo)
+    if (riid == IID_IDXGIFactory)
+        HookCOMOnce(&Real_Factory_CreateSwapChain, (IUnknown*)pFactory, 10, Mine_Factory_CreateSwapChain);
+    if (riid == IID_IDXGIFactory1)
+        HookCOMOnce(&Real_Factory_CreateSwapChain, (IUnknown*)pFactory, 10, Mine_Factory_CreateSwapChain);
+    //if (riid == IID_IDXGIFactory2) {
+    //    HookCOMOnce(&Real_Factory_CreateSwapChain, (IUnknown*)pFactory, 10, Mine_Factory_CreateSwapChain);
+    //}
 }
 
 static HRESULT __stdcall Mine_CreateDXGIFactory(REFIID riid,void **ppFactory)
 {
   HRESULT hr = Real_CreateDXGIFactory(riid,ppFactory);
-  if(SUCCEEDED(hr))
-    HookDXGIFactory(riid, *ppFactory);
+  if (SUCCEEDED(hr)) {
+      printLog("video/dxgi: DXGIFactory created @ %p\n", *ppFactory);
+      HookDXGIFactory(riid, *ppFactory);
+  }
   return hr;
 }
 
 static HRESULT __stdcall Mine_CreateDXGIFactory1(REFIID riid,void **ppFactory)
 {
   HRESULT hr = Real_CreateDXGIFactory1(riid,ppFactory);
-  if(SUCCEEDED(hr))
-    HookDXGIFactory(riid, *ppFactory);
+  if (SUCCEEDED(hr)) {
+      printLog("video/dxgi: DXGIFactory1 created @ %p\n", *ppFactory);
+      HookDXGIFactory(riid, *ppFactory);
+  }
   return hr;
+}
+
+static HRESULT __stdcall Mine_CreateDXGIFactory2(REFIID riid, void** ppFactory)
+{
+    HRESULT hr = Real_CreateDXGIFactory2(riid, ppFactory);
+    if (SUCCEEDED(hr)) {
+        printLog("video/dxgi: DXGIFactory2 created @ %p\n", *ppFactory);
+        //HookDXGIFactory(riid, *ppFactory);
+    }
+    return hr;
 }
 
 static HRESULT __stdcall Mine_D3D11CreateDeviceAndSwapChain(IDXGIAdapter *pAdapter, D3D_DRIVER_TYPE DriverType, HMODULE Software, UINT Flags, const D3D_FEATURE_LEVEL *pFeatureLevels, UINT FeatureLevels, UINT SDKVersion, const DXGI_SWAP_CHAIN_DESC *pSwapChainDesc, IDXGISwapChain **ppSwapChain, ID3D11Device **ppDevice, D3D_FEATURE_LEVEL *pFeatureLevel, ID3D11DeviceContext **ppImmediateContext)
@@ -219,6 +239,7 @@ static HRESULT __stdcall Mine_D3D11CreateDeviceAndSwapChain(IDXGIAdapter *pAdapt
   return hr;
 }
 
+
 void initVideo_Direct3D10()
 {
   HMODULE dxgi = LoadLibraryA("dxgi.dll");
@@ -226,6 +247,7 @@ void initVideo_Direct3D10()
   {
     HookDLLFunction(&Real_CreateDXGIFactory,  dxgi, "CreateDXGIFactory",  Mine_CreateDXGIFactory);
     HookDLLFunction(&Real_CreateDXGIFactory1, dxgi, "CreateDXGIFactory1", Mine_CreateDXGIFactory1);
+    HookDLLFunction(&Real_CreateDXGIFactory2, dxgi, "CreateDXGIFactory2", Mine_CreateDXGIFactory2);
   }
   HMODULE d3d11 = LoadLibraryA("d3d11.dll");
   if(d3d11)
