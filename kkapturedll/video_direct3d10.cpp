@@ -189,21 +189,33 @@ static HRESULT __stdcall Mine_Factory_CreateSwapChain(IUnknown *me,IUnknown *dev
 
 void HookDXGIFactory(REFIID riid, void* pFactory)
 {
-    if (riid == IID_IDXGIFactory)
+    if (riid == IID_IDXGIFactory || riid == IID_IDXGIFactory1 || riid == IID_IDXGIFactory2) 
+    {
         HookCOMOnce(&Real_Factory_CreateSwapChain, (IUnknown*)pFactory, 10, Mine_Factory_CreateSwapChain);
-    if (riid == IID_IDXGIFactory1)
-        HookCOMOnce(&Real_Factory_CreateSwapChain, (IUnknown*)pFactory, 10, Mine_Factory_CreateSwapChain);
-    //if (riid == IID_IDXGIFactory2) {
-    //    HookCOMOnce(&Real_Factory_CreateSwapChain, (IUnknown*)pFactory, 10, Mine_Factory_CreateSwapChain);
-    //}
+    }
 }
 
 static HRESULT __stdcall Mine_CreateDXGIFactory(REFIID riid,void **ppFactory)
 {
   HRESULT hr = Real_CreateDXGIFactory(riid,ppFactory);
-  if (SUCCEEDED(hr)) {
+  if (SUCCEEDED(hr)) 
+  {
       printLog("video/dxgi: DXGIFactory created @ %p\n", *ppFactory);
-      HookDXGIFactory(riid, *ppFactory);
+      MEMORY_BASIC_INFORMATION mbi;
+      if (VirtualQuery(*ppFactory, &mbi, sizeof(MEMORY_BASIC_INFORMATION)))
+      {
+          printLog("video/debug: AllocationProtect %x @ %p\n", mbi.AllocationProtect, *ppFactory);
+          if (mbi.AllocationProtect == PAGE_READWRITE)
+          {
+              HookDXGIFactory(riid, *ppFactory);
+          }
+      }
+      else
+      {
+          printLog("video/debug: Failed to query %p", *ppFactory);
+          DWORD lastErr = GetLastError();
+          printLog(", Last Error %#X\n", lastErr);
+      }
   }
   return hr;
 }
@@ -211,9 +223,24 @@ static HRESULT __stdcall Mine_CreateDXGIFactory(REFIID riid,void **ppFactory)
 static HRESULT __stdcall Mine_CreateDXGIFactory1(REFIID riid,void **ppFactory)
 {
   HRESULT hr = Real_CreateDXGIFactory1(riid,ppFactory);
-  if (SUCCEEDED(hr)) {
+  if (SUCCEEDED(hr)) 
+  {
       printLog("video/dxgi: DXGIFactory1 created @ %p\n", *ppFactory);
-      HookDXGIFactory(riid, *ppFactory);
+      MEMORY_BASIC_INFORMATION mbi;
+      if(VirtualQuery(*ppFactory, &mbi, sizeof(MEMORY_BASIC_INFORMATION)))
+      {
+          printLog("video/debug: AllocationProtect %x @ %p\n", mbi.AllocationProtect, *ppFactory);
+          if (mbi.AllocationProtect == PAGE_READWRITE)
+          {
+              HookDXGIFactory(riid, *ppFactory);
+          }
+      } 
+      else
+      {
+          printLog("video/debug: Failed to query %p", *ppFactory);
+          DWORD lastErr = GetLastError();
+          printLog(", Last Error %#X\n", lastErr);
+      }
   }
   return hr;
 }
@@ -221,9 +248,24 @@ static HRESULT __stdcall Mine_CreateDXGIFactory1(REFIID riid,void **ppFactory)
 static HRESULT __stdcall Mine_CreateDXGIFactory2(REFIID riid, void** ppFactory)
 {
     HRESULT hr = Real_CreateDXGIFactory2(riid, ppFactory);
-    if (SUCCEEDED(hr)) {
+    if (SUCCEEDED(hr)) 
+    {
         printLog("video/dxgi: DXGIFactory2 created @ %p\n", *ppFactory);
-        //HookDXGIFactory(riid, *ppFactory);
+        MEMORY_BASIC_INFORMATION mbi;
+        if (VirtualQuery(*ppFactory, &mbi, sizeof(MEMORY_BASIC_INFORMATION)))
+        {
+            printLog("video/debug: AllocationProtect %x @ %p\n", mbi.AllocationProtect, *ppFactory);
+            if (mbi.AllocationProtect == PAGE_READWRITE) 
+            {
+                HookDXGIFactory(riid, *ppFactory);
+            }
+        }
+        else
+        {
+            printLog("video/debug: Failed to query %p", *ppFactory);
+            DWORD lastErr = GetLastError();
+            printLog(", Last Error %#X\n", lastErr);
+        }
     }
     return hr;
 }
