@@ -32,7 +32,7 @@
 
 static HRESULT (__stdcall *Real_CreateDXGIFactory)(REFIID riid,void **ppFactory) = 0;
 static HRESULT (__stdcall *Real_CreateDXGIFactory1)(REFIID riid,void **ppFactory) = 0;
-static HRESULT(__stdcall* Real_CreateDXGIFactory2)(REFIID riid, void** ppFactory) = 0;
+static HRESULT(__stdcall* Real_CreateDXGIFactory2)(UINT flags, REFIID riid, void** ppFactory) = 0;
 static HRESULT (__stdcall *Real_Factory_CreateSwapChain)(IUnknown *me,IUnknown *dev,DXGI_SWAP_CHAIN_DESC *desc,IDXGISwapChain **chain) = 0;
 static HRESULT (__stdcall *Real_D3D11CreateDeviceAndSwapChain)(IDXGIAdapter *pAdapter, D3D_DRIVER_TYPE DriverType, HMODULE Software, UINT Flags, const D3D_FEATURE_LEVEL *pFeatureLevels, UINT FeatureLevels, UINT SDKVersion, const DXGI_SWAP_CHAIN_DESC *pSwapChainDesc, IDXGISwapChain **ppSwapChain, ID3D11Device **ppDevice, D3D_FEATURE_LEVEL *pFeatureLevel, ID3D11DeviceContext **ppImmediateContext);
 static HRESULT (__stdcall *Real_SwapChain_Present)(IDXGISwapChain *me,UINT SyncInterval,UINT Flags) = 0;
@@ -245,9 +245,9 @@ static HRESULT __stdcall Mine_CreateDXGIFactory1(REFIID riid,void **ppFactory)
   return hr;
 }
 
-static HRESULT __stdcall Mine_CreateDXGIFactory2(REFIID riid, void** ppFactory)
+static HRESULT __stdcall Mine_CreateDXGIFactory2(UINT flags, REFIID riid, void** ppFactory)
 {
-    HRESULT hr = Real_CreateDXGIFactory2(riid, ppFactory);
+    HRESULT hr = Real_CreateDXGIFactory2(flags, riid, ppFactory);
     if (SUCCEEDED(hr)) 
     {
         printLog("video/dxgi: DXGIFactory2 created @ %p\n", *ppFactory);
