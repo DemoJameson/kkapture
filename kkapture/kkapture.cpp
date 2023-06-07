@@ -173,6 +173,19 @@ static void SaveSettingsToRegistry()
   }
 }
 
+static void ResetSettings()
+{
+  RegDeleteKey(HKEY_CURRENT_USER,RegistryKeyName);
+
+  TCHAR szPath[MAX_PATH];
+  GetModuleFileName(NULL, szPath, MAX_PATH);
+
+  STARTUPINFO si = { sizeof(si) };
+  PROCESS_INFORMATION pi;
+  if (CreateProcess(szPath, NULL, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+    ExitProcess(0);
+}
+
 static int IntPow(int a,int b)
 {
   int x = 1;
@@ -383,6 +396,10 @@ static INT_PTR CALLBACK MainDialogProc(HWND hWndDlg,UINT uMsg,WPARAM wParam,LPAR
   case WM_COMMAND:
     switch(LOWORD(wParam))
     {
+    case IDC_RESET:
+      ResetSettings();
+      return TRUE;
+
     case IDCANCEL:
       EndDialog(hWndDlg,0);
       return TRUE;

@@ -38,6 +38,7 @@
 #define IDC_FFMPEGINOPTS                1037
 #define IDC_FFMPEGOUTLABEL              1038
 #define IDC_FFMPEGOUTOPTS               1039
+#define IDC_RESET                       1040
 
 // Next default values for new objects
 // 
