@@ -1,3 +1,7 @@
+version 1.5.0:
+* vulkan support (thanks @EnderHane)
+* add reset button
+
 version 1.4.3:
 * fix D3D11 (thanks @EnderHane)
 
